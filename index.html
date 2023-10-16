@@ -1,0 +1,248 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        .box-content {
+            padding: 50px 0;
+            background-color: rgb(39, 48, 83);
+            border-radius: 8px;
+        }
+
+        .nav-content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar bg-body-tertiary nav-content">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">ข้อมูลการจอง</span>
+        </div>
+    </nav>
+    <div class="container" id="containerBook">
+        <div class="row mt-5" id="bookingCardContainer"></div>
+    </div>
+    <script src="https://static.line-scdn.net/liff/edge/versions/2.9.0/sdk.js"></script>
+    <script>
+
+        let booking;
+
+        function runApp() {
+            liff.getProfile().then(profile => {
+
+                if (profile.userId) {
+                    const url = `http://190.92.220.17:7000/api/mybooking/${profile.userId}`;
+                    const options = {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    fetch(url, options)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            data.forEach(bookingData => {
+                                booking = bookingData;
+                                createBookingCard();
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                } else { }
+
+            }).catch(err => console.error(err));
+        }
+
+        liff.init({ liffId: "2001169049-Pxp3KBjo" }, () => {
+            if (liff.isLoggedIn()) {
+                runApp()
+            } else {
+                liff.login();
+            }
+        }, err => console.error(err.code, error.message));
+
+
+        function createBookingCard() {
+
+            let dateCheckin = booking.check_in;
+            let objectCheckin = new Date(dateCheckin);
+            let formattedCheckin = objectCheckin.toISOString().split('T')[0];
+
+            let dateCheckout = booking.check_out;
+            let objectCheckout = new Date(dateCheckout);
+            let formattedCheckout = objectCheckout.toISOString().split('T')[0];
+
+
+            const cardDiv = document.createElement('div');
+            cardDiv.innerHTML = `
+                <div class="mt-4 mb-4 p-4 text-light box-content">
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="data_name" placeholder="name" value="${booking.name}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">Phone No.</label>
+                        <input type="text" class="form-control" id="data_phone" placeholder="name" value="${booking.phone}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="data_email" placeholder="name" value="${booking.mail}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">Check in ${formattedCheckin}</label>
+                        <input type="date" class="form-control" id="data_checkin" placeholder="name" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">Check out ${formattedCheckout}</label>
+                        <input type="date" class="form-control" id="data_checkout" placeholder="name" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">สาขา</label>
+                        <select class="form-select" id="data_branch" aria-label="Default select example">
+                            <option selected value="${booking.branch}">M${booking.branch}</option>
+                            <option value="1">M1</option>
+                            <option value="2">M2</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">ประเภทห้อง</label>
+                        <select class="form-select" id="data_roomstyle" aria-label="Default select example">
+                            <option selected value="${booking.roomstyle}">${booking.roomstyle}</option>
+                            <option value="1">One</option>
+                            <option value="2">Two</option>
+                            <option value="3">Three</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleFormControlInput1" class="form-label">จำนวนห้อง</label>
+                        <select class="form-select" id="data_room" aria-label="Default select example">
+                            <option selected value="${booking.room}">${booking.room}</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+
+                    <p><strong>Status:</strong> ${booking.status_booking}</p>
+
+                    <div class="col text-center">
+                        <button type="button" class="btn btn-primary" onclick="editBooking('${booking.booking_id}', '${booking.status_booking}')">แก้ไขการจอง</button>
+                        <button type="button" class="btn btn-light" onclick="cancelBooking('${booking.booking_id}')">ยกเลิกการจอง</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('bookingCardContainer').appendChild(cardDiv);
+        }
+
+
+
+        function editBooking($data_id, $data_status) {
+
+            const url = 'http://190.92.220.17:7000/api/booking';
+            const data = {
+                id: $data_id,
+                check_out: document.getElementById('data_checkout').value,
+                mail: document.getElementById('data_email').value,
+                phone: document.getElementById('data_phone').value,
+                check_in: document.getElementById('data_checkin').value,
+                name: document.getElementById('data_name').value,
+                roomstyle: document.getElementById('data_roomstyle').value,
+                branch: document.getElementById('data_branch').value,
+                room: document.getElementById('data_room').value,
+                status: $data_status
+            };
+
+
+            if (data.check_in && data.check_out) {
+
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                };
+
+                fetch(url, options)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        alert('แก้ไขข้อมูลเรียบร้อย');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+
+            } else if (!data.check_in && data.check_out) {
+                alert('กรุณาเลือกวันที่ Check in');
+            } else if (data.check_in && !data.check_out) {
+                alert('กรุณาเลือกวันที่ Check out');
+            } else {
+                alert('กรุณาเลือกวันที่ Check in และ Check out');
+            }
+
+        }
+
+        function cancelBooking($data_id) {
+
+            var result = window.confirm("คุณต้องการยกเลิกการจอง?");
+            if (result) {
+                const url = 'http://190.92.220.17:7000/api/removebooking';
+                const data = {
+                    id: $data_id
+                };
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                };
+
+                fetch(url, options)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        document.getElementById('containerBook').innerHTML = '';
+                        createBookingCard();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            } else {
+                console.log("ยกเลิก");
+            }
+
+        }
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
